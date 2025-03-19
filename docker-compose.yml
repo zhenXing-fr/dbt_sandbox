@@ -1,0 +1,71 @@
+services:
+  postgres:
+    build: ./postgres
+    networks:
+      - dbt-network
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=dbt_user
+      - POSTGRES_PASSWORD=dbt_pass
+      - POSTGRES_DB=dbt_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dbt_user -d dbt_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow-scheduler:
+    image: apache/airflow:2.6.2
+    command: scheduler
+    networks:
+      - dbt-network
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow_db
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_SECRET_KEY:-default-secret-key}
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-46BKjoQld3vAYuT0u1KvQ9yNTBkQZYZWqWuejVq3o4g=}
+      - AIRFLOW__LOGGING__REMOTE_LOGGING=False
+      - TZ=UTC
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  airflow-webserver:
+    image: apache/airflow:2.6.2
+    command: webserver
+    ports:
+      - "8080:8080"
+    networks:
+      - dbt-network
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres:5432/airflow_db
+      - AIRFLOW__WEBSERVER__DEFAULT_UI_TIMEZONE=UTC
+      - AIRFLOW__WEBSERVER__SECRET_KEY=${AIRFLOW_SECRET_KEY:-default-secret-key}
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:-46BKjoQld3vAYuT0u1KvQ9yNTBkQZYZWqWuejVq3o4g=}
+      - AIRFLOW__LOGGING__REMOTE_LOGGING=False
+      - AIRFLOW__API__AUTH_BACKEND=airflow.api.auth.backend.basic_auth
+      - TZ=UTC
+    depends_on:
+      - airflow-scheduler
+    restart: unless-stopped
+
+  dbt-builder:
+    build: ./dbt
+    image: dbt-project
+    networks:
+      - dbt-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: tail -f /dev/null
+
+networks:
+  dbt-network:
+    driver: bridge
