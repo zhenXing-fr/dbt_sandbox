@@ -1,9 +1,6 @@
 # dbt_sandbox
 play ground for learning dbt and testing new features
 
-# dbt_sandbox
-A playground for learning dbt and testing new features.
-
 ## Setup Instructions
 
 ### 1. Clean up existing containers
