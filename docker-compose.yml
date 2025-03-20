@@ -14,6 +14,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   airflow-scheduler:
     image: apache/airflow:2.6.2
@@ -69,3 +72,7 @@ services:
 networks:
   dbt-network:
     driver: bridge
+    name: dbt-network
+
+volumes:
+  postgres_data:

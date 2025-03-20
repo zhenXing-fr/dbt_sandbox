@@ -52,3 +52,39 @@ docker-compose ps
 ## Notes
 - The `dbt-builder` service is configured to run in idle mode (`tail -f /dev/null`) and can be used for interactive debugging or running dbt commands.
 - Ensure that the `dbt-network` is created before starting the services to avoid network-related issues.
+
+
+```mermaid
+sequenceDiagram
+    participant User as User
+    participant DockerCompose as docker-compose
+    participant AirflowWebserver as airflow-webserver
+    participant AirflowScheduler as airflow-scheduler
+    participant DBTBuilder as dbt-builder
+    participant Postgres as postgres
+
+    %% Setup Phase
+    User->>DockerCompose: docker-compose up -d --build
+    DockerCompose->>Postgres: Start postgres container
+    DockerCompose->>AirflowWebserver: Start airflow-webserver container
+    DockerCompose->>AirflowScheduler: Start airflow-scheduler container
+    DockerCompose->>DBTBuilder: Start dbt-builder container
+
+    %% Airflow Initialization
+    User->>AirflowWebserver: airflow db init
+    AirflowWebserver->>Postgres: Initialize Airflow metadata database
+
+    User->>AirflowWebserver: airflow users create
+    AirflowWebserver->>Postgres: Create admin user
+
+    %% DAG Execution
+    User->>AirflowWebserver: Trigger dbt_pipeline DAG
+    AirflowWebserver->>AirflowScheduler: Schedule dbt_pipeline DAG
+    AirflowScheduler->>DBTBuilder: Execute dbt run
+    DBTBuilder->>Postgres: Query database for dbt models
+    DBTBuilder->>AirflowScheduler: Return dbt run results
+
+    AirflowScheduler->>DBTBuilder: Execute dbt test
+    DBTBuilder->>Postgres: Query database for dbt tests
+    DBTBuilder->>AirflowScheduler: Return dbt test results
+    AirflowScheduler->>AirflowWebserver: Update DAG status
