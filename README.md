@@ -85,3 +85,9 @@ sequenceDiagram
     DBTBuilder->>Postgres: Query database for dbt tests
     DBTBuilder->>AirflowScheduler: Return dbt test results
     AirflowScheduler->>AirflowWebserver: Update DAG status
+
+
+<img width="1263" alt="image" src="https://github.com/user-attachments/assets/a5b765be-0fe9-4474-9504-a1947e49f2e2" />
+
+<img width="771" alt="image" src="https://github.com/user-attachments/assets/ddaeb2ce-f13f-475c-8a37-614f3c5b1c70" />
+
